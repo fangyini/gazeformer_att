@@ -183,6 +183,8 @@ def main(args):
         start_epoch = checkpoint['epoch'] + 1
         print("Retraining from", start_epoch)
     smallest_val_loss = -1000
+    early_stopping_patience = 10
+    early_stopping_current = 0
     for epoch in range(start_epoch, args.epochs+1):
         start_time = timer()
         train_token_loss, train_reg_loss, train_t_loss = train(epoch = epoch, args = args, model = model, SlowOpt = SlowOpt, FastOpt = FastOpt, MidOpt = MidOpt, loss_fn_token = loss_fn_token, loss_fn_y = loss_fn_y, loss_fn_x = loss_fn_x, loss_fn_t = loss_fn_t, train_dataloader = train_dataloader, model_dir = model_dir, model_name = model_name, device = device)
@@ -193,6 +195,12 @@ def main(args):
             smallest_val_loss = overall_val_loss
             # save model
             save_model_train(epoch, args, model, SlowOpt, MidOpt, FastOpt, model_dir, model_name)
+            early_stopping_current = 0
+        else:
+            early_stopping_current += 1
+        if early_stopping_current == early_stopping_patience:
+            print('Early Stopping...reached patience 10.')
+            return
         output_str = f"Epoch: {epoch}, Train token loss: {train_token_loss:.3f}, Train reg loss: {train_reg_loss:.3f}, Train T loss: {train_t_loss:.3f}, Val token loss: {valid_token_loss:.3f},  Val reg loss: {valid_reg_loss:.3f}, Valid T loss: {valid_t_loss:.3f}, "f"Epoch time = {(end_time - start_time):.3f}s, Saved to {model_dir+'/'+model_name}\n"
         print(output_str)
         with open(logfile, "a") as myfile:
