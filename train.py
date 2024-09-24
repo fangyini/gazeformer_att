@@ -62,7 +62,6 @@ def train(epoch, args, model, SlowOpt, MidOpt, FastOpt, loss_fn_token, loss_fn_y
             
             minibatch += 1.
             tepoch.set_postfix(token_loss=token_losses/minibatch, reg_loss=reg_losses/minibatch, t_loss=t_losses/minibatch)
-    save_model_train(epoch, args, model, SlowOpt, MidOpt, FastOpt, model_dir, model_name)
     return token_losses / len(train_dataloader),  reg_losses / len(train_dataloader), t_losses / len(train_dataloader)
     
 
@@ -101,7 +100,10 @@ def evaluate(model, loss_fn_token, loss_fn_y, loss_fn_x, loss_fn_t, valid_datalo
     
 def main(args):
     seed_everything(args.seed)
-    device = torch.device('cuda:{}'.format(args.cuda))
+    if args.cuda == -1:
+        device = torch.device('mps')
+    else:
+        device = torch.device('cuda:{}'.format(args.cuda))
     device_id = args.cuda
     retraining = args.retraining
     last_checkpoint = args.last_checkpoint
@@ -113,7 +115,7 @@ def main(args):
     else:
         timenow = datetime.now().strftime("%d-%m-%Y-%H-%M-%S") 
         logfile = 'logs/output_' + timenow + '.txt'
-        model_dir = join(args.model_root, 'train_' + timenow)
+        model_dir = join(args.model_root, args.model_folder)
         os.mkdir(model_dir)
         
         open(logfile, 'w').close()
@@ -180,12 +182,17 @@ def main(args):
         FastOpt.load_state_dict(checkpoint['optim_fast'])
         start_epoch = checkpoint['epoch'] + 1
         print("Retraining from", start_epoch)
+    smallest_val_loss = -1000
     for epoch in range(start_epoch, args.epochs+1):
         start_time = timer()
         train_token_loss, train_reg_loss, train_t_loss = train(epoch = epoch, args = args, model = model, SlowOpt = SlowOpt, FastOpt = FastOpt, MidOpt = MidOpt, loss_fn_token = loss_fn_token, loss_fn_y = loss_fn_y, loss_fn_x = loss_fn_x, loss_fn_t = loss_fn_t, train_dataloader = train_dataloader, model_dir = model_dir, model_name = model_name, device = device)
         end_time = timer()
-        
         valid_token_loss, valid_reg_loss, valid_t_loss = evaluate(model = model, loss_fn_token = loss_fn_token, loss_fn_y = loss_fn_y, loss_fn_x = loss_fn_x, loss_fn_t=loss_fn_t, valid_dataloader = valid_dataloader, device = device)
+        overall_val_loss = valid_token_loss + valid_reg_loss + valid_t_loss
+        if overall_val_loss < smallest_val_loss:
+            smallest_val_loss = overall_val_loss
+            # save model
+            save_model_train(epoch, args, model, SlowOpt, MidOpt, FastOpt, model_dir, model_name)
         output_str = f"Epoch: {epoch}, Train token loss: {train_token_loss:.3f}, Train reg loss: {train_reg_loss:.3f}, Train T loss: {train_t_loss:.3f}, Val token loss: {valid_token_loss:.3f},  Val reg loss: {valid_reg_loss:.3f}, Valid T loss: {valid_t_loss:.3f}, "f"Epoch time = {(end_time - start_time):.3f}s, Saved to {model_dir+'/'+model_name}\n"
         print(output_str)
         with open(logfile, "a") as myfile:
@@ -197,4 +204,3 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('Gazeformer Train', parents=[get_args_parser_train()])
     args = parser.parse_args()
     main(args)
-    

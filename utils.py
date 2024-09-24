@@ -60,7 +60,7 @@ def get_args_parser_train():
     parser.add_argument('--im_w', default=32, type=int, help="Width of feature map input to encoder")
     parser.add_argument('--patch_size', default=16, type=int, help="Patch size of feature map input with respect to fixation image dimensions (320X512)")
     parser.add_argument('--seed', default=42, type=int, help="seed")
-    parser.add_argument('--batch_size', default=32, type=int, help="Batch Size")
+    parser.add_argument('--batch_size', default=8, type=int, help="Batch Size")
     parser.add_argument('--epochs', default=200, type=int, help="Maximum number of epochs to train")
     parser.add_argument('--max_len', default=7, type=int, help="Maximum length of scanpath")
     parser.add_argument('--num_encoder', default=6, type=int, help="Number of transformer encoder layers")
@@ -75,8 +75,9 @@ def get_args_parser_train():
     parser.add_argument('--retraining', default=False, action='store_true', help="Retraining from a checkpoint")
     parser.add_argument('--last_checkpoint', default='./saved_models/gazeformer_6E_6D_32_512d_70.pkg', type=str, help="Checkpoint for retraining")
     parser.add_argument('--model_root', default='./saved_models/trained', type=str, help="Checkpoint directory")
-    parser.add_argument('--cuda', default=0, type=int, help="CUDA core to load models and data")
+    parser.add_argument('--cuda', default=-1, type=int, help="CUDA core to load models and data")
     parser.add_argument('--num_workers', default=6, type=int, help="Number of workers for data loader")
+    parser.add_argument('--model_folder', default='test', type=str)
     return parser
 
     
@@ -94,7 +95,7 @@ def save_model_train(epoch, args, model, SlowOpt, MidOpt, FastOpt, model_dir, mo
         "optim_fast":
         FastOpt.state_dict(),    
     }
-    torch.save(state, join(model_dir, model_name+'_'+str(epoch)+'.pkg'))
-    
+    #torch.save(state, join(model_dir, model_name+'_'+str(epoch)+'.pkg'))
+    torch.save(state, join(model_dir, 'best_gazeformer.pkg'))
     
 
