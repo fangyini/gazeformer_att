@@ -1,2 +1,2 @@
-python3 train.py --dataset_dir=./dataset --model_folder test --img_ftrs_dir=./dataset/image_features --cuda=-1
-python3 test.py --trained_model=./saved_models/test/best_gazeformer.pkg --dataset_dir=./dataset --img_ftrs_dir=./dataset/image_features --cuda=-1
+python3 train.py --dataset_dir=./dataset --model_folder test --img_ftrs_dir=./dataset/image_features --cuda=0
+python3 test.py --trained_model=./saved_models/test/best_gazeformer.pkg --dataset_dir=./dataset --img_ftrs_dir=./dataset/image_features --cuda=0

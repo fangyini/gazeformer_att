@@ -74,7 +74,7 @@ def get_args_parser_train():
     parser.add_argument('--cls_dropout', default=0.4, type=float, help="Final scanpath prediction dropout rate")
     parser.add_argument('--retraining', default=False, action='store_true', help="Retraining from a checkpoint")
     parser.add_argument('--last_checkpoint', default='./saved_models/gazeformer_6E_6D_32_512d_70.pkg', type=str, help="Checkpoint for retraining")
-    parser.add_argument('--model_root', default='./saved_models/trained', type=str, help="Checkpoint directory")
+    parser.add_argument('--model_root', default='./saved_models/', type=str, help="Checkpoint directory")
     parser.add_argument('--cuda', default=-1, type=int, help="CUDA core to load models and data")
     parser.add_argument('--num_workers', default=6, type=int, help="Number of workers for data loader")
     parser.add_argument('--model_folder', default='test', type=str)
