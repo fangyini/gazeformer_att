@@ -116,7 +116,8 @@ def main(args):
         timenow = datetime.now().strftime("%d-%m-%Y-%H-%M-%S") 
         logfile = 'logs/output_' + timenow + '.txt'
         model_dir = join(args.model_root, args.model_folder)
-        os.mkdir(model_dir)
+        if not os.path.exists(model_dir):
+            os.mkdir(model_dir)
         
         open(logfile, 'w').close()
         with open(logfile, "a") as myfile:
@@ -182,7 +183,7 @@ def main(args):
         FastOpt.load_state_dict(checkpoint['optim_fast'])
         start_epoch = checkpoint['epoch'] + 1
         print("Retraining from", start_epoch)
-    smallest_val_loss = -1000
+    smallest_val_loss = 10000
     early_stopping_patience = 10
     early_stopping_current = 0
     for epoch in range(start_epoch, args.epochs+1):
