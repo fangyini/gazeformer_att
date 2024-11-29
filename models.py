@@ -92,6 +92,8 @@ class TransformerEncoderWrapper(nn.Module):
         self._reset_parameters(self.input_proj)
         self._reset_parameters(self.img_transform)
         self._reset_parameters(self.text_transform)
+        self.selfatt_img = nn.MultiheadAttention(512, 4, dropout=0.1)
+        self.selfatt_text = nn.MultiheadAttention(512, 4, dropout=0.1)
             
     def _reset_parameters(self, mod):
         for p in mod.parameters():
@@ -102,12 +104,15 @@ class TransformerEncoderWrapper(nn.Module):
                 mask: Optional[Tensor] = None,
                 src_key_padding_mask: Optional[Tensor] = None,
                 patchpos_embed: Optional[Tensor] = None):
-        src_proj = self.input_proj(src).permute(1,0,2)#input projection from 2048 -> d
-
+        '''src_proj = self.input_proj(src).permute(1,0,2)#input projection from 2048 -> d
         output = self.encoder(src_proj, mask=mask, src_key_padding_mask=src_key_padding_mask, patchpos_embed=patchpos_embed)#transformer encoder
-        
         memory = self.img_transform(output)#project image features to multimodal space
-        task_emb = self.text_transform(task)#project task features to multimodal space
+        task_emb = self.text_transform(task)#project task features to multimodal space'''
+
+        src_proj = self.input_proj(src).permute(1, 0, 2)
+        memory, _ = self.selfatt_img(src_proj, src_proj, src_proj) #640,2,512
+        task_emb = self.text_transform(task).unsqueeze(0)
+        task_emb, _ = self.selfatt_text(task_emb, task_emb, task_emb) #1,2,512
 
         return memory, task_emb
 
@@ -121,6 +126,7 @@ class TransformerDecoderWrapper(nn.Module):
         
         self.linear = nn.Linear(d_model * 2, d_model)
         self._reset_parameters()
+        self.crossatt = nn.MultiheadAttention(512, 4, dropout=0.1)
         
     def _reset_parameters(self):
         for p in self.parameters():
@@ -138,7 +144,12 @@ class TransformerDecoderWrapper(nn.Module):
                 querypos_embed: Optional[Tensor] = None,
                 patchpos_embed: Optional[Tensor] = None):
         #vision-semantic joint embedding
-        memory_task = self.dropout(self.activation(self.linear(torch.cat([memory, task_emb.unsqueeze(0).repeat(memory.size(0),1,1)], dim = -1))))
+        #memory_task = self.dropout(self.activation(self.linear(torch.cat([memory, task_emb.unsqueeze(0).repeat(memory.size(0),1,1)], dim = -1))))
+
+        memory_task, _ = self.crossatt(memory, task_emb, task_emb) # memory task 640,2,512
+        memory_task = self.dropout(self.activation(
+            self.linear(torch.cat([memory, task_emb.repeat(memory.size(0), 1, 1)], dim=-1))))
+
         #decoder
         output = self.decoder(tgt, memory_task, tgt_mask=tgt_mask, memory_mask=memory_mask,
                               tgt_key_padding_mask=tgt_key_padding_mask,
