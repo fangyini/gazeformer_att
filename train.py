@@ -18,7 +18,7 @@ from models import Transformer
 from gazeformer import gazeformer
 from utils import seed_everything, fixations2seq, get_args_parser_train, save_model_train
 from dataset import fixation_dataset, COCOSearch18Collator
-
+import test
 torch.autograd.set_detect_anomaly(True)
    
     
@@ -184,14 +184,18 @@ def main(args):
         start_epoch = checkpoint['epoch'] + 1
         print("Retraining from", start_epoch)
     smallest_val_loss = 10000
-    early_stopping_patience = 10
+    early_stopping_patience = 20
     early_stopping_current = 0
     for epoch in range(start_epoch, args.epochs+1):
         start_time = timer()
         train_token_loss, train_reg_loss, train_t_loss = train(epoch = epoch, args = args, model = model, SlowOpt = SlowOpt, FastOpt = FastOpt, MidOpt = MidOpt, loss_fn_token = loss_fn_token, loss_fn_y = loss_fn_y, loss_fn_x = loss_fn_x, loss_fn_t = loss_fn_t, train_dataloader = train_dataloader, model_dir = model_dir, model_name = model_name, device = device)
         end_time = timer()
-        valid_token_loss, valid_reg_loss, valid_t_loss = evaluate(model = model, loss_fn_token = loss_fn_token, loss_fn_y = loss_fn_y, loss_fn_x = loss_fn_x, loss_fn_t=loss_fn_t, valid_dataloader = valid_dataloader, device = device)
-        overall_val_loss = valid_token_loss + valid_reg_loss + valid_t_loss
+
+        seq_score, seq_score_t = test.test(args, model)
+        overall_val_loss = seq_score + seq_score_t
+
+        #valid_token_loss, valid_reg_loss, valid_t_loss = evaluate(model = model, loss_fn_token = loss_fn_token, loss_fn_y = loss_fn_y, loss_fn_x = loss_fn_x, loss_fn_t=loss_fn_t, valid_dataloader = valid_dataloader, device = device)
+        #overall_val_loss = valid_token_loss + valid_reg_loss + valid_t_loss
         if overall_val_loss < smallest_val_loss:
             smallest_val_loss = overall_val_loss
             # save model
@@ -200,9 +204,10 @@ def main(args):
         else:
             early_stopping_current += 1
         if early_stopping_current == early_stopping_patience:
-            print('Early Stopping...reached patience 10.')
+            print('Early Stopping...reached patience '+str(early_stopping_patience))
             return
-        output_str = f"Epoch: {epoch}, Train token loss: {train_token_loss:.3f}, Train reg loss: {train_reg_loss:.3f}, Train T loss: {train_t_loss:.3f}, Val token loss: {valid_token_loss:.3f},  Val reg loss: {valid_reg_loss:.3f}, Valid T loss: {valid_t_loss:.3f}, "f"Epoch time = {(end_time - start_time):.3f}s, Saved to {model_dir+'/'+model_name}\n"
+        #output_str = f"Epoch: {epoch}, Train token loss: {train_token_loss:.3f}, Train reg loss: {train_reg_loss:.3f}, Train T loss: {train_t_loss:.3f}, Val token loss: {valid_token_loss:.3f},  Val reg loss: {valid_reg_loss:.3f}, Valid T loss: {valid_t_loss:.3f}, "f"Epoch time = {(end_time - start_time):.3f}s, Saved to {model_dir+'/'+model_name}\n"
+        output_str = f"Epoch: {epoch}, Train token loss: {train_token_loss:.3f}, Train reg loss: {train_reg_loss:.3f}, Train T loss: {train_t_loss:.3f}, seq_score: {seq_score:.3f},  seq_score_t: {seq_score_t:.3f}, "f"Epoch time = {(end_time - start_time):.3f}s, Saved to {model_dir + '/' + model_name}\n"
         print(output_str)
         with open(logfile, "a") as myfile:
             myfile.write(output_str)

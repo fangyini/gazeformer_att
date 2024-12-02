@@ -40,13 +40,14 @@ def run_model(model, src, task, device = "cuda:0", im_h=20, im_w=32, patch_size 
     return scanpaths
     
     
-def test(args):
-    trained_model = args.trained_model
+def test(args, model=None):
     device = torch.device('cuda:{}'.format(args.cuda))
-    transformer = Transformer(num_encoder_layers=args.num_encoder, nhead = args.nhead, d_model = args.hidden_dim, num_decoder_layers=args.num_decoder, dim_feedforward = args.hidden_dim, img_hidden_dim = args.img_hidden_dim, lm_dmodel = args.lm_hidden_dim, device = device).to(device)
-    model = gazeformer(transformer = transformer, spatial_dim = (args.im_h, args.im_w), max_len = args.max_len, device = device).to(device)
-    model.load_state_dict(torch.load(trained_model, map_location=device)['model'])
-    model.eval()
+    if model is None:
+        trained_model = args.trained_model
+        transformer = Transformer(num_encoder_layers=args.num_encoder, nhead = args.nhead, d_model = args.hidden_dim, num_decoder_layers=args.num_decoder, dim_feedforward = args.hidden_dim, img_hidden_dim = args.img_hidden_dim, lm_dmodel = args.lm_hidden_dim, device = device).to(device)
+        model = gazeformer(transformer = transformer, spatial_dim = (args.im_h, args.im_w), max_len = args.max_len, device = device).to(device)
+        model.load_state_dict(torch.load(trained_model, map_location=device)['model'])
+        model.eval()
     dataset_root = args.dataset_dir
     img_ftrs_dir = args.img_ftrs_dir
     max_len = args.max_len
