@@ -16,7 +16,7 @@ warnings.filterwarnings("ignore")
 
 from models import Transformer
 from gazeformer import gazeformer
-from utils import seed_everything, fixations2seq, get_args_parser_train, save_model_train
+from utils import seed_everything, fixations2seq, get_args_parser_train, save_model_train, get_args_parser_test
 from dataset import fixation_dataset, COCOSearch18Collator
 import test
 torch.autograd.set_detect_anomaly(True)
@@ -99,6 +99,11 @@ def evaluate(model, loss_fn_token, loss_fn_y, loss_fn_x, loss_fn_t, valid_datalo
     
     
 def main(args):
+    # add test_args
+    test_parser = argparse.ArgumentParser('Gaze Transformer Test', parents=[get_args_parser_test()])
+    test_args = test_parser.parse_args()
+    seed_everything(test_args.seed)
+
     seed_everything(args.seed)
     if args.cuda == -1:
         device = torch.device('mps')
@@ -191,7 +196,7 @@ def main(args):
         train_token_loss, train_reg_loss, train_t_loss = train(epoch = epoch, args = args, model = model, SlowOpt = SlowOpt, FastOpt = FastOpt, MidOpt = MidOpt, loss_fn_token = loss_fn_token, loss_fn_y = loss_fn_y, loss_fn_x = loss_fn_x, loss_fn_t = loss_fn_t, train_dataloader = train_dataloader, model_dir = model_dir, model_name = model_name, device = device)
         end_time = timer()
 
-        seq_score, seq_score_t = test.test(args, model)
+        seq_score, seq_score_t = test.test(test_args, model)
         overall_val_loss = seq_score + seq_score_t
 
         #valid_token_loss, valid_reg_loss, valid_t_loss = evaluate(model = model, loss_fn_token = loss_fn_token, loss_fn_y = loss_fn_y, loss_fn_x = loss_fn_x, loss_fn_t=loss_fn_t, valid_dataloader = valid_dataloader, device = device)
